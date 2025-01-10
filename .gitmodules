@@ -1,0 +1,6 @@
+[submodule "frontend"]
+	path = frontend
+	url = git@github.com:ZFudge/chocolate-smart-home-frontend.git
+[submodule "backend"]
+	path = backend
+	url = git@github.com:ZFudge/chocolate-smart-home-backend.git
