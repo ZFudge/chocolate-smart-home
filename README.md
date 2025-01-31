@@ -1,4 +1,4 @@
-# Chocolate Smart Home 🏠
+# Chocolate Smart Home 🍫🏠
 
 An extensible smart home platform that enables seamless integration of custom IoT devices and clients through a plugin-based architecture.
 
