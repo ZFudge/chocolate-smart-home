@@ -48,8 +48,10 @@ backend:
 
 
 # Dev
-dev: backend frontend
+dev: clean backend frontend
 
 clean:
 	@$(MAKE) -C backend clean
 	@$(MAKE) -C frontend clean
+
+all: network mqtt backend frontend
