@@ -1,6 +1,8 @@
 TRASH_PATH := /tmp/null
 NETWORK_NAME := chocolate-smart-home-network
 
+
+.PHONY: help
 help:
 	@echo "Usage: make TARGET"
 	@echo ""
@@ -8,8 +10,8 @@ help:
 	@echo "  help                         Print this help message"
 	@echo ""
 	@echo "  network                      Create externally managed network"
-	@echo "  dev                          Run frontend and backend containers"
-	@echo "  clean                        Stop all containers"
+	@echo "  dev                          Run app in dev mode"
+	@echo "  down                        Stop all containers"
 	@echo ""
 	@echo "Backend:"
 	@echo "  mqtt                         Create mqtt container"
@@ -22,11 +24,14 @@ help:
 	@echo ""
 
 
+.PHONY: network
 network:
-	@${MAKE} -C backend network
+	@${MAKE} -C backend network \
+		2> ${TRASH_PATH} || true
 
 
 # Frontend
+.PHONY: storybook
 storybook:
 	@$(MAKE) -C frontend storybook
 
@@ -34,22 +39,49 @@ storybook:
 frontend:
 	@$(MAKE) -C frontend run
 
+.PHONY: static
 static:
 	@$(MAKE) -C frontend build
 
 
 # Backend
+.PHONY: mqtt
 mqtt:
-	@$(MAKE) -C backend mqtt
+	@$(MAKE) -C backend startmqtt
 	
 .PHONY: backend
 backend:
 	@$(MAKE) -C backend run
 
+.PHONY: broadcast
+broadcast:
+	@$(MAKE) -C backend broadcast
+
+.PHONY: mqttlogs
+mqttlogs:
+	@$(MAKE) -C backend mqttlogs
+
+.PHONY: build
+build:
+	@docker compose -f docker-compose-dev.yml build
+
 
 # Dev
-dev: backend frontend
+.PHONY: dev
+dev:
+	@docker compose -f docker-compose-dev.yml up -d --build --force-recreate
 
-clean:
-	@$(MAKE) -C backend clean
-	@$(MAKE) -C frontend clean
+.PHONY: down
+down:
+	@docker compose -f docker-compose-dev.yml down
+
+.PHONY: all
+all: network mqtt backend frontend
+
+.PHONY: shell-be
+shell-be:
+	@$(MAKE) -C backend shell
+
+.PHONY: shell-fe
+shell-fe:
+	@$(MAKE) -C frontend shell
