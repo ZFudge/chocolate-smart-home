@@ -23,7 +23,8 @@ help:
 
 
 network:
-	@${MAKE} -C backend network
+	@${MAKE} -C backend network \
+		2> ${TRASH_PATH} || true
 
 
 # Frontend
@@ -40,18 +41,36 @@ static:
 
 # Backend
 mqtt:
-	@$(MAKE) -C backend mqtt
+	@$(MAKE) -C backend startmqtt
 	
 .PHONY: backend
 backend:
 	@$(MAKE) -C backend run
 
+.PHONY: broadcast
+broadcast:
+	@$(MAKE) -C backend broadcast
+
+mqttlogs:
+	@$(MAKE) -C backend mqttlogs
+
+virtual_clients:
+	@$(MAKE) -C backend virtual_clients
+
+build:
+	@$(MAKE) -C backend build
 
 # Dev
-dev: clean backend frontend
+dev: clean mqtt backend frontend
 
 clean:
 	@$(MAKE) -C backend clean
 	@$(MAKE) -C frontend clean
 
 all: network mqtt backend frontend
+
+shell-be:
+	@$(MAKE) -C backend shell
+
+shell-fe:
+	@$(MAKE) -C frontend shell
