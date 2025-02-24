@@ -29,6 +29,9 @@ network:
 	@${MAKE} -C backend network \
 		2> ${TRASH_PATH} || true
 
+.PHONY: logs
+logs:
+	@docker compose -f docker-compose-dev.yml logs -f
 
 # Frontend
 .PHONY: storybook
@@ -47,7 +50,7 @@ static:
 # Backend
 .PHONY: mqtt
 mqtt:
-	@$(MAKE) -C backend startmqtt
+	@$(MAKE) -C backend mqtt
 	
 .PHONY: backend
 backend:
@@ -67,21 +70,39 @@ build:
 
 
 # Dev
-.PHONY: dev
-dev:
-	@docker compose -f docker-compose-dev.yml up -d --build --force-recreate
+.PHONY: dev-up
+dev-up:
+	@docker compose -f docker-compose-dev.yml up -d --remove-orphans
 
 .PHONY: down
 down:
 	@docker compose -f docker-compose-dev.yml down
 
-.PHONY: all
-all: network mqtt backend frontend
+.PHONY: dev
+dev: down dev-up logs
+
+.PHONY: clean
+clean:
+	@docker compose -f docker-compose-dev.yml down
+	@docker network rm ${NETWORK_NAME}
 
 .PHONY: shell-be
 shell-be:
-	@$(MAKE) -C backend shell
+	@docker-compose -f docker-compose-dev.yml exec csm-fastapi-server-dev sh
+
+.PHONY: repl
+repl:
+	@docker-compose -f docker-compose-dev.yml exec csm-fastapi-server-dev \
+		sh -c "pipenv run python -i src/main.py"
 
 .PHONY: shell-fe
 shell-fe:
-	@$(MAKE) -C frontend shell
+	@docker-compose -f docker-compose-dev.yml exec csm-frontend-dev sh
+
+.PHONY: shell-vcs
+shell-vcs:
+	@docker-compose -f docker-compose-dev.yml exec virtual-clients sh
+
+.PHONY: shell-postgres
+shell-postgres:
+	@docker-compose -f docker-compose-dev.yml exec csm-postgres-db-dev sh
