@@ -3,14 +3,17 @@ networks:
     name: chocolate-smart-home-network
     external: true
 
+
 volumes:
-  chocolate-smart-home-postgres-vol:
-    name: chocolate-smart-home-postgres-vol
+  csm-postgres-vol:
+    name: csm-postgres-vol
+
 
 x-common-attrs: &common-attrs
   env_file: backend/.env
   networks:
     - chocolate-smart-home-network
+
 
 services:
   csm-fastapi-server-dev:
@@ -26,7 +29,24 @@ services:
     ports:
       - 8000:8000
     volumes:
-      - .:/chocolate-smart-home-backend
+      - ./backend:/backend
+    depends_on:
+      csm-postgres-db-dev:
+        condition: service_healthy
+  virtual-clients:
+    << : *common-attrs
+    image: chocolate-smart-home-backend
+    container_name: virtual-clients
+    volumes:
+      - ./backend:/backend
+    command: [
+      "pipenv",
+      "run",
+      "uvicorn",
+      "src.virtual_client:virtual_clients",
+      "--port=8001"
+    ]
+    # REMOVE THIS DEPENDENCY, THE VIRTUAL CLIENTS SHOULD NOT CONNECT TO THE POSTGRES DB
     depends_on:
       csm-postgres-db-dev:
         condition: service_healthy
@@ -45,22 +65,6 @@ services:
     ]
     networks:
       - chocolate-smart-home-network
-  virtual-clients:
-    << : *common-attrs
-    build: backend
-    image: chocolate-smart-home-backend
-    container_name: virtual-clients
-    ports:
-      - 8001:8001
-    volumes:
-      - .:/chocolate-smart-home-backend
-    command: [
-      "pipenv",
-      "run",
-      "uvicorn",
-      "src.virtual_client:virtual_clients",
-      "--port=8001"
-    ]
   csm-postgres-db-dev:
     << : *common-attrs
     image: postgres:12.18-bullseye
@@ -68,7 +72,7 @@ services:
     ports:
       - 15432:5432
     volumes:
-      - chocolate-smart-home-postgres-vol:/var/lib/postgresql
+      - csm-postgres-vol:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
