@@ -36,7 +36,8 @@ logs:
 # Frontend
 .PHONY: storybook
 storybook:
-	@$(MAKE) -C frontend storybook
+	@docker compose -f docker-compose-dev.yml exec -d csm-frontend-dev sh -c "npm run storybook"
+	@docker compose -f docker-compose-dev.yml logs -f csm-frontend-dev
 
 .PHONY: frontend
 frontend:
