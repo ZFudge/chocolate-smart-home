@@ -1,6 +1,5 @@
+CSM_NETWORK := csm-network
 TRASH_PATH := /tmp/null
-NETWORK_NAME := chocolate-smart-home-network
-
 
 .PHONY: help
 help:
@@ -10,14 +9,16 @@ help:
 	@echo "  help                         Print this help message"
 	@echo ""
 	@echo "  network                      Create externally managed network"
+	@echo "  build                        Build app image"
 	@echo "  dev                          Run app in dev mode"
-	@echo "  down                        Stop all containers"
+	@echo "  down                         Stop all containers"
 	@echo ""
 	@echo "Backend:"
 	@echo "  mqtt                         Create mqtt container"
 	@echo "  backend                      Run backend app and db containers"
 	@echo ""
 	@echo "Frontend:"
+	@echo "  install                      Install dependencies"
 	@echo "  frontend                     Start frontend dev server"
 	@echo "  storybook                    Start storybook"
 	@echo "  static                       Build static files"
@@ -29,6 +30,11 @@ network:
 	@${MAKE} -C backend network \
 		2> ${TRASH_PATH} || true
 
+.PHONY: logs-dir
+logs-dir:
+	@mkdir -p $(shell pwd)/logs \
+		2> ${TRASH_PATH} || true
+
 .PHONY: logs
 logs:
 	@docker compose -f docker-compose-dev.yml logs -f
@@ -36,23 +42,43 @@ logs:
 # Frontend
 .PHONY: storybook
 storybook:
-	@docker compose -f docker-compose-dev.yml exec -d csm-frontend-dev sh -c "npm run storybook"
+	@docker compose -f docker-compose-dev.yml exec -d csm-frontend-dev sh -c \
+		"npm run storybook"
 	@docker compose -f docker-compose-dev.yml logs -f csm-frontend-dev
 
 .PHONY: frontend
 frontend:
 	@$(MAKE) -C frontend run
 
+.PHONY: install
+install:
+	@$(MAKE) -C frontend install
+
 .PHONY: static
 static:
-	@$(MAKE) -C frontend build
+	@$(MAKE) -C frontend static
+
+.PHONY: testfe
+testfe:
+	@docker compose -f docker-compose-dev.yml \
+		exec csm-frontend-dev \
+		sh -c "npm run test"
+
+.PHONY: testbe
+testbe:
+	@docker compose -f docker-compose-dev.yml \
+		exec csm-backend-dev \
+		sh -c "pytest"
 
 
 # Backend
 .PHONY: mqtt
 mqtt:
-	@$(MAKE) -C backend mqtt
-	
+	@$(MAKE) -C backend mqtt \
+		2> ${TRASH_PATH} || true
+	@docker start mqtt \
+		2> ${TRASH_PATH} || true
+
 .PHONY: backend
 backend:
 	@$(MAKE) -C backend run
@@ -67,34 +93,34 @@ mqttlogs:
 
 .PHONY: build
 build:
-	@docker compose -f docker-compose-dev.yml build
-
+	@$(MAKE) -C backend build
 
 # Dev
-.PHONY: dev-up
-dev-up:
-	@docker compose -f docker-compose-dev.yml up -d --remove-orphans
+.PHONY: run-dev
+run-dev:
+	@docker compose -f docker-compose-dev.yml up -d
 
 .PHONY: down
 down:
-	@docker compose -f docker-compose-dev.yml down
-
-.PHONY: dev
-dev: down dev-up logs
+	@docker compose -f docker-compose-dev.yml down \
+		--remove-orphans \
+		2> ${TRASH_PATH} || true
 
 .PHONY: clean
-clean:
-	@docker compose -f docker-compose-dev.yml down
-	@docker network rm ${NETWORK_NAME}
+clean: down
+
+.PHONY: dev
+dev: down logs-dir network mqtt run-dev logs
 
 .PHONY: shell-be
 shell-be:
-	@docker-compose -f docker-compose-dev.yml exec csm-fastapi-server-dev sh
+	@docker-compose -f docker-compose-dev.yml \
+		exec csm-backend-dev sh
 
 .PHONY: repl
 repl:
-	@docker-compose -f docker-compose-dev.yml exec csm-fastapi-server-dev \
-		sh -c "pipenv run python -i src/main.py"
+	@docker-compose -f docker-compose-dev.yml exec csm-backend-dev sh -c \
+		"pipenv run python -i src/main.py"
 
 .PHONY: shell-fe
 shell-fe:

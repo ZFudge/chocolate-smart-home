@@ -1,6 +1,6 @@
 networks:
-  chocolate-smart-home-network:
-    name: chocolate-smart-home-network
+  csm-network:
+    name: csm-network
     external: true
 
 
@@ -12,33 +12,48 @@ volumes:
 x-common-attrs: &common-attrs
   env_file: backend/.env
   networks:
-    - chocolate-smart-home-network
+    - csm-network
 
 
 services:
-  csm-fastapi-server-dev:
+  csm-backend-dev:
     << : *common-attrs
     build: backend
-    image: chocolate-smart-home-backend
-    container_name: csm-fastapi-server
+    image: csm-backend
+    container_name: csm-backend
+    ports:
+      - 8000:8000
     develop:
       watch:
         - action: sync
-          path: ./
-          target: /chocolate-smart-home-backend
-    ports:
-      - 8000:8000
+          path: ./backend/
+          target: /backend/
     volumes:
-      - ./backend:/backend
+      - type: bind
+        source: ./backend/
+        target: /backend/
+      - type: bind
+        source: ./logs/
+        target: /var/logs/csm/
     depends_on:
       csm-postgres-db-dev:
         condition: service_healthy
+    command: [
+      "pipenv", "run", "uvicorn", "src.main:app",
+      "--host", "0.0.0.0",
+      "--reload",
+      "--log-level", "debug",
+      "--log-config", "logs.ini"
+    ]
   virtual-clients:
     << : *common-attrs
-    image: chocolate-smart-home-backend
+    build: backend
+    image: csm-backend
     container_name: virtual-clients
     volumes:
-      - ./backend:/backend
+      - type: bind
+        source: ./backend/
+        target: /backend/
     command: [
       "pipenv",
       "run",
@@ -46,7 +61,7 @@ services:
       "src.virtual_client:virtual_clients",
       "--port=8001"
     ]
-    # REMOVE THIS DEPENDENCY, THE VIRTUAL CLIENTS SHOULD NOT CONNECT TO THE POSTGRES DB
+    # TODO: REMOVE THIS DEPENDENCY, THE VIRTUAL CLIENTS SHOULD NOT CONNECT TO THE POSTGRES DB
     depends_on:
       csm-postgres-db-dev:
         condition: service_healthy
@@ -57,15 +72,15 @@ services:
       - 5173:5173
       - 6006:6006
     volumes:
-      - ./frontend:/frontend
+      - type: bind
+        source: ./frontend/
+        target: /frontend/
     working_dir: /frontend
     command: [
       "npm",
       "run",
       "dev"
     ]
-    networks:
-      - chocolate-smart-home-network
   csm-postgres-db-dev:
     << : *common-attrs
     image: postgres:12.18-bullseye
