@@ -16,6 +16,23 @@ x-common-attrs: &common-attrs
 
 
 services:
+  csm-frontend-dev:
+    image: node:22.13.0-alpine
+    container_name: csm-fe-dev
+    restart: always
+    ports:
+      - 15173:15173
+      - 16006:6006
+    volumes:
+      - type: bind
+        source: ./frontend/
+        target: /frontend/
+    working_dir: /frontend
+    command: [
+      "npm",
+      "run",
+      "dev"
+    ]
   csm-backend-dev:
     << : *common-attrs
     build: backend
@@ -65,26 +82,10 @@ services:
     depends_on:
       csm-postgres-db-dev:
         condition: service_healthy
-  csm-frontend-dev:
-    image: node:22.13.0-alpine
-    container_name: csm-frontend-dev
-    ports:
-      - 5173:5173
-      - 6006:6006
-    volumes:
-      - type: bind
-        source: ./frontend/
-        target: /frontend/
-    working_dir: /frontend
-    command: [
-      "npm",
-      "run",
-      "dev"
-    ]
   csm-postgres-db-dev:
     << : *common-attrs
     image: postgres:12.18-bullseye
-    container_name: csm-postgres-db
+    container_name: csm-postgres-db-dev
     ports:
       - 15432:5432
     volumes:
