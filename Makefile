@@ -23,6 +23,8 @@ help:
 	@echo "  frontend                     Start frontend dev server"
 	@echo "  storybook                    Start storybook"
 	@echo "  static                       Build static files"
+	@echo "  testfe                       Run FE tests"
+	@echo ""
 	@echo ""
 
 
