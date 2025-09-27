@@ -65,6 +65,10 @@ services:
       "--log-level", "debug",
       "--log-config", "logs.ini"
     ]
+    healthcheck:
+      test: ["CMD-SHELL", "curl http://localhost:8000/device/health/check/"]
+      timeout: 5s
+      retries: 5
   virtual-clients:
     << : *common-attrs
     build: backend
@@ -83,6 +87,8 @@ services:
     ]
     depends_on:
       csm-postgres-db-dev:
+        condition: service_healthy
+      csm-backend-dev:
         condition: service_healthy
   csm-postgres-db-dev:
     << : *common-attrs
