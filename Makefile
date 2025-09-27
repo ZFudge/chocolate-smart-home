@@ -16,6 +16,7 @@ help:
 	@echo "Backend:"
 	@echo "  mqtt                         Create mqtt container"
 	@echo "  backend                      Run backend app and db containers"
+	@echo "  testbe                       Run backend tests"
 	@echo ""
 	@echo "Frontend:"
 	@echo "  install                      Install dependencies"
@@ -108,6 +109,7 @@ down:
 	@docker compose -f docker-compose-dev.yml down \
 		--remove-orphans \
 		2> ${TRASH_PATH} || true
+	@docker volume rm csm-postgres-vol || true
 
 .PHONY: clean
 clean: down
@@ -118,7 +120,7 @@ dev: down logs-dir network mqtt run-dev setup-backend-test-db logs
 .PHONY: shell-be
 shell-be:
 	@docker-compose -f docker-compose-dev.yml \
-		exec csm-backend-dev sh
+		exec csm-backend-dev ash -l
 
 .PHONY: repl
 repl:
