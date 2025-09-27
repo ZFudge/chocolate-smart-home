@@ -52,6 +52,9 @@ services:
       - type: bind
         source: ./logs/
         target: /var/logs/csm/
+      - type: bind
+        source: ./backend/csm.sh
+        target: /etc/profile.d/csm.sh
     depends_on:
       csm-postgres-db-dev:
         condition: service_healthy
@@ -78,7 +81,6 @@ services:
       "src.virtual_client:virtual_clients",
       "--port=8001"
     ]
-    # TODO: REMOVE THIS DEPENDENCY, THE VIRTUAL CLIENTS SHOULD NOT CONNECT TO THE POSTGRES DB
     depends_on:
       csm-postgres-db-dev:
         condition: service_healthy
