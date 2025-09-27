@@ -28,6 +28,8 @@ services:
         source: ./frontend/
         target: /frontend/
     working_dir: /frontend
+    networks:
+      - csm-network
     command: [
       "npm",
       "run",
