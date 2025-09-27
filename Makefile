@@ -66,9 +66,7 @@ testfe:
 
 .PHONY: testbe
 testbe:
-	@docker compose -f docker-compose-dev.yml \
-		exec csm-backend-dev \
-		sh -c "pytest"
+	@$(MAKE) -C backend test
 
 
 # Backend
@@ -93,9 +91,14 @@ mqttlogs:
 
 .PHONY: build
 build:
-	@$(MAKE) -C backend build
+	@docker-compose -f docker-compose-dev.yml build csm-backend-dev
+
 
 # Dev
+.PHONY: setup-backend-test-db
+setup-backend-test-db:
+	@$(MAKE) -C backend testdb
+
 .PHONY: run-dev
 run-dev:
 	@docker compose -f docker-compose-dev.yml up -d
@@ -110,7 +113,7 @@ down:
 clean: down
 
 .PHONY: dev
-dev: down logs-dir network mqtt run-dev logs
+dev: down logs-dir network mqtt run-dev setup-backend-test-db logs
 
 .PHONY: shell-be
 shell-be:
