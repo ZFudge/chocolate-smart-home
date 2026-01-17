@@ -35,6 +35,35 @@ services:
       "run",
       "dev"
     ]
+  csm-ws-service:
+    << : *common-attrs
+    build: ./ws-service/
+    image: csm-ws-service:latest
+    container_name: csm-ws-service
+    ports:
+      - 8050:8050
+    volumes:
+      - type: bind
+        source: ./ws-service/
+        target: /ws-service/
+      - type: bind
+        source: ./logs
+        target  : /var/logs/ws-service/
+    working_dir: /ws-service/
+    command: [
+      "uvicorn", "src.main:app", "--reload",
+      "--host", "0.0.0.0",
+      "--port", "8050",
+      "--log-level", "debug",
+      "--log-config", "logs.ini"
+    ]
+    restart: always
+    develop:
+      watch:
+        - action: sync
+          path: ./ws-service/
+          target: /ws-service/
+    env_file: .env.development
   csm-backend-dev:
     << : *common-attrs
     build: backend
@@ -60,8 +89,13 @@ services:
     depends_on:
       csm-postgres-db-dev:
         condition: service_healthy
+      csm-ws-service:
+        condition: service_started
     command: [
-      "pipenv", "run", "uvicorn", "src.main:app",
+      "pipenv", "run",
+      "uvicorn", "src.main:app",
+      "--port", "8000",
+      "--workers", "1",
       "--host", "0.0.0.0",
       "--reload",
       "--log-level", "debug",
@@ -81,17 +115,20 @@ services:
         source: ./backend/
         target: /backend/
     command: [
-      "pipenv",
-      "run",
-      "uvicorn",
+      "pipenv", "run", "uvicorn",
       "src.virtual_client:virtual_clients",
-      "--port=8001"
+      "--port=8001",
+      "--workers", "1",
+      "--log-level", "debug",
+      "--log-config", "logs.ini"
     ]
     depends_on:
       csm-postgres-db-dev:
         condition: service_healthy
       csm-backend-dev:
         condition: service_healthy
+      csm-ws-service:
+        condition: service_started
   csm-postgres-db-dev:
     << : *common-attrs
     image: postgres:12.18-bullseye
