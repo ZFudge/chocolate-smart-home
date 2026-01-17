@@ -4,3 +4,7 @@
 [submodule "backend"]
 	path = backend
 	url = git@github.com:ZFudge/chocolate-smart-home-backend.git
+
+[submodule "ws-service"]
+	path = ws-service
+	url = https://github.com/ZFudge/chocolate-smart-home-websockets
