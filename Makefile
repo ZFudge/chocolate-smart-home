@@ -90,7 +90,8 @@ broadcast:
 
 .PHONY: mqttlogs
 mqttlogs:
-	@$(MAKE) -C backend mqttlogs
+	@docker compose -f docker-compose-dev.yml exec -it mqtt sh -c \
+	'tail -50 -f /mosquitto/log/mosquitto.log'
 
 .PHONY: build
 build:
@@ -117,7 +118,7 @@ down:
 clean: down
 
 .PHONY: dev
-dev: down logs-dir network mqtt run-dev setup-backend-test-db logs
+dev: down logs-dir network run-dev setup-backend-test-db logs
 
 .PHONY: shell-be
 shell-be:

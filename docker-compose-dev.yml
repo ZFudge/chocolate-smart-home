@@ -15,6 +15,18 @@ x-common-attrs: &common-attrs
 
 
 services:
+  mqtt:
+    << : *common-attrs
+    image: eclipse-mosquitto:2.0.20
+    container_name: csm-mqtt
+    ports:
+      - 1883:1883
+      - 9001:9001
+    volumes:
+      - type: bind
+        source: ./backend/mosquitto.conf
+        target: /mosquitto/config/mosquitto.conf
+    restart: always
   csm-frontend-dev:
     << : *common-attrs
     image: node:22.13.0-alpine
@@ -91,6 +103,8 @@ services:
       csm-postgres-db-dev:
         condition: service_healthy
       csm-ws-service:
+        condition: service_started
+      mqtt:
         condition: service_started
     command: [
       "pipenv", "run",
