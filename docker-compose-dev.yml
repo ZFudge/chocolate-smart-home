@@ -86,6 +86,9 @@ services:
       - type: bind
         source: ./backend/csm.sh
         target: /etc/profile.d/csm.sh
+      - type: bind
+        source: ./backend/healthcheck.sh
+        target: /usr/local/bin/healthcheck.sh
     depends_on:
       csm-postgres-db-dev:
         condition: service_healthy
@@ -98,11 +101,12 @@ services:
       "--workers", "1",
       "--host", "0.0.0.0",
       "--reload",
+      "--reload-exclude", "src/virtual_client.py",
       "--log-level", "debug",
       "--log-config", "logs.ini"
     ]
     healthcheck:
-      test: ["CMD-SHELL", "curl http://localhost:8000/device/health/check/"]
+      test: ["CMD-SHELL", "/usr/local/bin/healthcheck.sh"]
       timeout: 5s
       retries: 5
   virtual-clients:
@@ -127,8 +131,6 @@ services:
         condition: service_healthy
       csm-backend-dev:
         condition: service_healthy
-      csm-ws-service:
-        condition: service_started
   csm-postgres-db-dev:
     << : *common-attrs
     image: postgres:12.18-bullseye
