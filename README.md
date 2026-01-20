@@ -28,39 +28,19 @@ Libraries and examples for integrating various microcontroller-based devices.
 A websocket service for real-time communication between the frontend and backend.
 - [Websocket Repository](https://github.com/ZFudge/chocolate-smart-home-websockets)
 
-### Development
+### Development (requires docker compose and make to be installed)
+
 Clone project and navigate to the project directory:
 ```
 git clone --recurse-submodules git@github.com:ZFudge/chocolate-smart-home.git
 cd chocolate-smart-home
 ```
 
-Pull external images:
+Run the following script to pull external images, build local images, install frontend dependencies, and copy environment variables:
 ```
-docker compose -f docker-compose-dev.yml pull \
-    mqtt \
-    csm-frontend-dev \
-    csm-postgres-db-dev \
-    csm-nginx
+./setup-dev.sh
 ```
 
-Build local images:
-```
-docker compose -f docker-compose-dev.yml build \
-    csm-ws-service \
-    csm-backend-dev
-```
-
-Install frontend dependencies:
-```
-make install
-```
-
-Copy environment variables:
-```
-cp backend/.env.example backend/.env
-
-```
 Start project in development mode:
 ```
 make dev
