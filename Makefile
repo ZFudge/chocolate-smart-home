@@ -110,8 +110,7 @@ run-dev:
 .PHONY: down
 down:
 	@docker compose -f docker-compose-dev.yml down \
-		--remove-orphans \
-		2> ${TRASH_PATH} || true
+		--remove-orphans || true
 	@docker volume rm csm-postgres-vol || true
 
 .PHONY: clean
