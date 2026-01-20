@@ -29,7 +29,7 @@ A websocket service for real-time communication between the frontend and backend
 - [Websocket Repository](https://github.com/ZFudge/chocolate-smart-home-websockets)
 
 ### Development
-Clone project and run in development mode:
+Clone project and navigate to the project directory:
 ```
 git clone --recurse-submodules git@github.com:ZFudge/chocolate-smart-home.git
 cd chocolate-smart-home
@@ -43,6 +43,7 @@ docker compose -f docker-compose-dev.yml pull \
     csm-postgres-db-dev \
     csm-nginx
 ```
+
 Build local images:
 ```
 docker compose -f docker-compose-dev.yml build \
@@ -54,14 +55,17 @@ Install frontend dependencies:
 ```
 make install
 ```
+
 Copy environment variables:
 ```
 cp backend/.env.example backend/.env
+
 ```
 Start project in development mode:
 ```
 make dev
 ```
+
 Open http://localhost:15173/ in your browser.
 
 
@@ -76,8 +80,4 @@ make logs
 View mqtt logs:
 ```
 make mqttlogs
-```
-Clean project:
-```
-make clean
 ```
