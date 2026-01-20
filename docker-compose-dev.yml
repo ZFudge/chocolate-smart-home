@@ -23,6 +23,9 @@ services:
       - type: bind
         source: ./backend/mosquitto.conf
         target: /mosquitto/config/mosquitto.conf
+      - type: bind
+        source: ./logs/
+        target: /mosquitto/log/
     restart: always
   csm-frontend-dev:
     << : *common-attrs
@@ -54,8 +57,8 @@ services:
         source: ./ws-service/
         target: /ws-service/
       - type: bind
-        source: ./logs
-        target  : /var/logs/ws-service/
+        source: ./logs/
+        target  : /var/logs/
     working_dir: /ws-service/
     command: [
       "uvicorn", "src.main:app", "--reload",
