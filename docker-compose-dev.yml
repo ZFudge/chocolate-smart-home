@@ -3,16 +3,13 @@ networks:
     name: csm-network
     external: true
 
-
 volumes:
   csm-postgres-vol:
     name: csm-postgres-vol
 
-
 x-common-attrs: &common-attrs
   networks:
     - csm-network
-
 
 services:
   mqtt:
