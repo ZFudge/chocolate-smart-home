@@ -2,3 +2,4 @@ logs/
 backend/
 frontend/
 ws-service/
+.DS_Store
