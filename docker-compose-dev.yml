@@ -8,37 +8,33 @@ volumes:
   csm-redis-data-dev:
     driver: local
 
-x-common-attrs: &common-attrs
-  env_file: ../backend/.env
+x-csm-network: &csm-network
   networks:
     - csm-network-dev
 
-x-common-network: &common-network
-  networks:
-    - csm-network-dev
+x-common-attrs: &common-attrs
+  env_file: backend/.env
+  << : *csm-network
 
 x-environment-variables: &environment-variables
-  MQTT_HOST: csm-mosquitto-dev
-  MQTT_CLIENT_ID: CSM-FASTAPI-SERVER-DEV
-  REDIS_HOST: csm-redis-dev
   BACKEND_STREAM_NAME: csm-backend-stream-dev
+  DB_HOST: csm-postgres-db-dev
+  LOG_SUFFIX: -dev
+  MQTT_CLIENT_ID: CSM-FASTAPI-SERVER-DEV
+  MQTT_HOST: csm-mqtt-dev
+  REDIS_HOST: csm-redis-dev
   WEBSOCKETS_STREAM_NAME: csm-websockets-stream-dev
 
 services:
   csm-mosquitto-dev:
     image: eclipse-mosquitto:2.0.20
     container_name: csm-mosquitto-dev
-    << : *common-network
+    << : *csm-network
     volumes:
-      - type: bind
-        source: ../backend/mosquitto.conf
-        target: /mosquitto/config/mosquitto.conf
-      - type: bind
-        source: /tmp/logs/mosquitto.log
-        target: /mosquitto/log/mosquitto.log
-      - type: bind
-        source: ../backend/scripts/mqtt_healthcheck.sh
-        target: /usr/local/bin/healthcheck.sh
+      - /tmp/csm-logs/:/mosquitto/log/
+      - ./backend/mosquitto/mosquitto-dev.conf:/mosquitto/config/mosquitto.conf
+      - ./backend/mosquitto/conf.d/:/mosquitto/config/conf.d/
+      - ./backend/scripts/mqtt_healthcheck.sh:/usr/local/bin/healthcheck.sh
     healthcheck:
       test: ["CMD-SHELL", "/usr/local/bin/healthcheck.sh"]
       interval: 10s
@@ -47,9 +43,9 @@ services:
       start_period: 5s
     restart: always
   csm-postgres-db-dev:
-    << : *common-attrs
     image: postgres:12.18-bullseye
     container_name: csm-postgres-db-dev
+    << : *common-attrs
     ports:
       - 15432:5432
     volumes:
@@ -60,9 +56,9 @@ services:
       timeout: 5s
       retries: 5
   csm-redis-dev:
-    << : *common-attrs
     image: redis:7.4.1-alpine
     container_name: csm-redis-dev
+    << : *common-attrs
     ports:
       - 6379:6379
     volumes:
@@ -74,24 +70,30 @@ services:
       retries: 5
       start_period: 5s
   csm-backend-dev:
-    << : *common-attrs
-    build: backend
-    image: csm-backend
+    image: csm-backend:dev
     container_name: csm-backend-dev
-    ports:
-      - 8000:8000
+    build:
+      context: backend/
+      target: csm-backend
+    << : *common-attrs
     environment:
       << : *environment-variables
+    ports:
+      - 8000:8000
     volumes:
-      - type: bind
-        source: ../backend/
-        target: /backend/
-      - type: bind
-        source: /tmp/logs/
-        target: /var/logs/csm/
-      - type: bind
-        source: ../backend/scripts/csm.sh
-        target: /etc/profile.d/csm.sh
+      - /tmp/csm-logs/:/var/logs/csm/
+      - ./backend/:/backend/
+    command: [
+      "uvicorn", "src.main:app",
+      "--host", "0.0.0.0",
+      "--log-config", "logs.ini",
+      "--log-level", "debug",
+      "--reload",
+      "--reload-exclude", "src/plugins/device_plugins/*/scheduling.py",
+      "--reload-exclude", "src/plugins/virtual_clients/*",
+      "--reload-exclude", "src/scheduler/*",
+      "--reload-exclude", "test_*.py",
+    ]
     depends_on:
       csm-postgres-db-dev:
         condition: service_healthy
@@ -99,19 +101,6 @@ services:
         condition: service_healthy
       csm-redis-dev:
         condition: service_healthy
-    command: [
-      "pipenv", "run", "uvicorn",
-      "src.main:app",
-      "--host", "0.0.0.0",
-      "--reload",
-      "--reload-dir", "src",
-      "--reload-exclude", "plugins/device_plugins/*/tests/*",
-      "--reload-exclude", "plugins/device_plugins/*/scheduling.py",
-      "--reload-exclude", "plugins/virtual_clients/*",
-      "--reload-exclude", "scheduler/*",
-      "--log-level", "debug",
-      "--log-config", "logs.ini"
-    ]
     healthcheck:
       test: ["CMD-SHELL", "curl -i http://localhost:8000/healthcheck | grep '200 OK'"]
       interval: 10s
@@ -119,31 +108,25 @@ services:
       retries: 3
       start_period: 5s
   csm-scheduler-dev:
-    build: .
-    image: csm-backend
+    image: csm-backend:dev
     container_name: csm-scheduler-dev
-    ports:
-      - 8100:8100
     << : *common-attrs
     environment:
       << : *environment-variables
+    ports:
+      - 8100:8100
     volumes:
-      - type: bind
-        source: ../backend/
-        target: /backend/
-      - type: bind
-        source: /tmp/logs/
-        target: /var/logs/csm/
+      - /tmp/csm-logs/:/var/logs/csm/
+      - ./backend/:/backend/
     command: [
-      "pipenv", "run", "uvicorn",
-      "src.scheduler.sched_app:sched_app",
+      "uvicorn", "src.scheduler.sched_app:sched_app",
       "--host", "0.0.0.0",
-      "--reload",
-      "--reload-dir", "src/scheduler/",
       "--port=8100",
-      "--workers", "1",
+      "--log-config", "logs.ini",
       "--log-level", "debug",
-      "--log-config", "logs.ini"
+      "--reload",
+      "--reload-include", "src/scheduler/",
+      "--reload-include", "src/plugins/device_plugins/**/scheduling.py",
     ]
     depends_on:
       csm-mosquitto-dev:
@@ -155,28 +138,19 @@ services:
       csm-redis-dev:
         condition: service_healthy
   virtual-clients:
-    << : *common-attrs
-    build: backend
-    image: csm-backend
+    image: csm-backend:dev
     container_name: virtual-clients
-    environment:
-      MQTT_CLIENT_ID_PREFIX: virtual-clients
-      LOGGER: vcs
-      << : *environment-variables
+    << : *common-attrs
     volumes:
-      - type: bind
-        source: ../backend/
-        target: /backend/
-      - type: bind
-        source: /tmp/logs/
-        target: /var/logs/csm/
+      - /tmp/csm-logs/:/var/logs/csm/
+      - ./backend/:/backend/
     command: [
-      "pipenv", "run", "uvicorn",
-      "src.plugins.virtual_clients.vcs_app:vcs_manager",
+      "uvicorn", "src.plugins.virtual_clients.vcs_app:vcs_manager",
       "--port=8200",
-      "--workers", "1",
+      "--log-config", "logs.ini",
       "--log-level", "debug",
-      "--log-config", "logs.ini"
+      "--reload",
+      "--reload-dir", "src/plugins/virtual_clients/",
     ]
     depends_on:
       csm-mosquitto-dev:
@@ -187,29 +161,31 @@ services:
         condition: service_healthy
       csm-redis-dev:
         condition: service_healthy
-  csm-ws-service-dev:
-    build: ../ws-service/
-    image: csm-ws-service
-    container_name: csm-ws-service-dev
-    working_dir: /ws-service/
-    << : *common-network
+    environment:
+      MQTT_CLIENT_ID_PREFIX: virtual-clients
+      LOGGER: vcs
+      << : *environment-variables
+  csm-websockets-dev:
+    image: csm-websockets:dev
+    container_name: csm-websockets-dev
+    build: ./ws-service/
+    working_dir: /csm-websockets/
+    << : *csm-network
     environment:
       << : *environment-variables
+    ports:
+      - 8050:8050
     volumes:
-      - type: bind
-        source: ../ws-service/
-        target: /ws-service/
-      - type: bind
-        source: /tmp/logs/
-        target: /var/logs/
+      - /tmp/csm-logs/:/var/logs/
+      - ./ws-service/:/csm-websockets/
     command: [
       "uvicorn", "src.ws_app:app",
-      "--reload",
-      "--reload-dir", "src",
       "--host", "0.0.0.0",
       "--port", "8050",
       "--log-level", "debug",
-      "--log-config", "logs.ini"
+      "--log-config", "logs.ini",
+      "--reload",
+      "--reload-dir", "src",
     ]
     depends_on:
       csm-backend-dev: # healthcheck websocket connect triggers a request for all data, which relays through redis to the backend
@@ -230,17 +206,17 @@ services:
     << : *common-attrs
     volumes:
       - type: bind
-        source: ../nginx/development.conf
+        source: nginx/development.conf
         target: /etc/nginx/conf.d/default.conf
         read_only: true
       - type: bind
-        source: ../frontend/dist
+        source: ./frontend/dist
         target: /usr/share/nginx/html
         read_only: true
     depends_on:
       csm-backend-dev:
         condition: service_healthy
-      csm-ws-service-dev:
+      csm-websockets-dev:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -s -v -i http://localhost/ 2>&1 | grep '200 OK'"]
@@ -253,15 +229,13 @@ services:
   csm-frontend-dev:
     image: node:22.13.0-alpine
     container_name: csm-frontend-dev
+    working_dir: /frontend
+    << : *common-attrs
     ports:
       - 15173:15173
       - 16006:6006
-    << : *common-attrs
     volumes:
-      - type: bind
-        source: ../frontend/
-        target: /frontend/
-    working_dir: /frontend
+      - ./frontend/:/frontend/
     command: ["npm", "run", "dev"]
     depends_on:
       csm-nginx-dev:

@@ -34,32 +34,24 @@ logsdir:
 
 .PHONY: build
 build:
-	@docker-compose -f docker/docker-compose-dev.yml build csm-backend-dev
+	@docker-compose -f docker-compose-dev.yml build csm-backend-dev
 
 .PHONY: clean
 clean:
-	@docker compose -f docker/docker-compose-dev.yml down \
-		--remove-orphans || true
-
-.PHONY: run-dev
-run-dev:
-	@docker compose -f docker/docker-compose-dev.yml up -d
-
-.PHONY: devclean
-devclean:
-	@docker compose -f docker/docker-compose-dev.yml down
+	@docker compose -f docker-compose-dev.yml down \
+      --remove-orphans || true
 
 .PHONY: devlogs
 devlogs:
-	@docker compose -f docker/docker-compose-dev.yml logs -f \
+	@docker compose -f docker-compose-dev.yml logs -f \
       csm-backend-dev \
       virtual-clients \
-	  csm-ws-service-dev \
+	  csm-websockets-dev \
 	  csm-scheduler-dev
 
 .PHONY: dev
-dev: devclean logsdir
-	@docker compose -f docker/docker-compose-dev.yml up -d
+dev: clean logsdir
+	@docker compose -f docker-compose-dev.yml up -d --remove-orphans
 	@make testdb
 	@make devlogs
 
@@ -75,11 +67,11 @@ static:
 .PHONY: test-fe
 test-fe:
 	@$(MAKE) -C frontend test || \
-	docker compose -f docker/docker-compose-dev.yml exec csm-frontend-dev sh -c "npm run test" || true
+	docker compose -f docker-compose-dev.yml exec csm-frontend-dev sh -c "npm run test" || true
 
 .PHONY: shell-fe
 shell-fe:
-	@docker-compose -f docker/docker-compose-dev.yml exec csm-frontend-dev sh
+	@docker-compose -f docker-compose-dev.yml exec csm-frontend-dev sh
 
 .PHONY: prettier
 prettier:
@@ -88,30 +80,30 @@ prettier:
 # MQTT
 .PHONY: mqttlogs
 mqttlogs:
-	@docker compose -f docker/docker-compose-dev.yml logs -f csm-mosquitto-dev
+	@docker compose -f docker-compose-dev.yml logs -f csm-mosquitto-dev
 
 # Backend
 .PHONY: shell-be
 shell-be:
-	@docker-compose -f docker/docker-compose-dev.yml \
-		exec csm-backend-dev ash -l || \
+	@docker-compose -f docker-compose-dev.yml \
+	  exec csm-backend-dev sh || \
 	$(MAKE) -C backend shell
 
 .PHONY: test-be
 test-be:
 	@$(MAKE) -C backend test || \
-	docker compose -f docker/docker-compose-dev.yml exec csm-backend-dev ash -l -c \
-	'pytest' || true
+	docker compose -f docker-compose-dev.yml exec csm-backend-dev sh -c \
+	  'pytest' || true
 
 
 .PHONY: coverage-main
 coverage-main:
-	@docker compose -f docker/docker-compose-dev.yml exec -it csm-backend-dev ash -l -c \
+	@docker compose -f docker-compose-dev.yml exec -it csm-backend-dev sh -c \
       'pytest --cov=src --cov-config=tests/.coveragerc --cov-report=term-missing tests/'
 
 .PHONY: coverage-plugins
 coverage-plugins:
-	@docker compose -f docker/docker-compose-dev.yml exec -it csm-backend-dev ash -l -c \
+	@docker compose -f docker-compose-dev.yml exec -it csm-backend-dev sh -c \
       'for plugin_name in $$(ls src/plugins/device_plugins/); do . ./scripts/coverage.sh; checkPluginCoverage $$plugin_name; done'
 
 .PHONY: coverage
@@ -120,8 +112,8 @@ coverage: testdb coverage-main coverage-plugins
 
 .PHONY: black
 black:
-	@docker compose -f docker/docker-compose-dev.yml exec csm-backend-dev ash -l -c \
-	'black /backend'
+	@docker compose -f docker-compose-dev.yml exec csm-backend-dev sh -c \
+	  'black /backend'
 
 .PHONY: testdb
 testdb:
@@ -129,12 +121,12 @@ testdb:
 
 .PHONY: shell-vcs
 shell-vcs:
-	@docker-compose -f docker/docker-compose-dev.yml exec virtual-clients sh
+	@docker-compose -f docker-compose-dev.yml exec virtual-clients sh
 
 .PHONY: shell-ws
 shell-ws:
-	@docker-compose -f docker/docker-compose-dev.yml exec csm-ws-service-dev sh
+	@docker-compose -f docker-compose-dev.yml exec csm-websockets-dev sh
 
 .PHONY: shell-db
 shell-db:
-	@docker-compose -f docker/docker-compose-dev.yml exec csm-postgres-db-dev sh
+	@docker-compose -f docker-compose-dev.yml exec csm-postgres-db-dev sh
