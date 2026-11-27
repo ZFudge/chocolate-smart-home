@@ -5,7 +5,7 @@ docker compose -f docker-compose-dev.yml pull \
     csm-nginx
 
 docker compose -f docker-compose-dev.yml build \
-    csm-ws-service \
+    csm-websockets \
     csm-backend-dev
 
 make install
